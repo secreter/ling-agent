@@ -5,3 +5,5 @@ dist/
 *.log
 .DS_Store
 .ling/
+node_modules/
+package-lock.json
