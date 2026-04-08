@@ -7,8 +7,11 @@ import { execSync } from "child_process";
 import { SessionStore, MemoryStore } from "./session/index.js";
 import type { Session, Message, SessionMetadata } from "./session/index.js";
 
-const client = new OpenAI();
-const model = "gpt-4o";
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+});
+const model = process.env.LLM_MODEL || "gpt-4o";
 const store = new SessionStore();
 
 const systemPrompt = `You are Ling, a coding assistant.

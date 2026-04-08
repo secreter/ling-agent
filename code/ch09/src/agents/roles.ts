@@ -2,6 +2,8 @@
 
 import type { SubAgentConfig } from "./types.js";
 
+const SUB_MODEL = process.env.LLM_MODEL || "gpt-4o-mini";
+
 /** Plan Agent：只读不写，分析项目结构和变更范围 */
 export function planAgent(task: string): SubAgentConfig {
   return {
@@ -15,7 +17,7 @@ Rules:
 
 Task: ${task}`,
     tools: ["read_file", "grep", "glob", "list_files"],
-    model: "gpt-4o-mini",
+    model: SUB_MODEL,
     maxTurns: 10,
   };
 }
@@ -54,7 +56,7 @@ Rules:
 
 Focus: ${focus}`,
     tools: ["read_file", "grep", "glob"],
-    model: "gpt-4o-mini",
+    model: SUB_MODEL,
     maxTurns: 10,
   };
 }

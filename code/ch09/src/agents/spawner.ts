@@ -3,7 +3,7 @@
 import OpenAI from "openai";
 import type { SubAgentConfig, SubAgentResult, ToolRegistry } from "./types.js";
 
-const DEFAULT_MODEL = "gpt-4o-mini";
+const DEFAULT_MODEL = process.env.LLM_MODEL || "gpt-4o-mini";
 const DEFAULT_MAX_TURNS = 15;
 
 export class AgentSpawner {

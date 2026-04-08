@@ -24,7 +24,7 @@ export class OpenAIProvider implements LLMProvider {
     this.name = `openai/${opts.model}`;
     this.client = new OpenAI({
       apiKey: opts.apiKey ?? process.env.OPENAI_API_KEY,
-      baseURL: opts.baseURL,
+      baseURL: opts.baseURL ?? process.env.OPENAI_BASE_URL,
     });
   }
 

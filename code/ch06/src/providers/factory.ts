@@ -12,7 +12,7 @@ export function createProvider(name?: ProviderName, model?: string): LLMProvider
 
   switch (provider) {
     case "openai":
-      return new OpenAIProvider({ model: model ?? process.env.OPENAI_MODEL ?? "gpt-4o" });
+      return new OpenAIProvider({ model: model ?? process.env.LLM_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4o" });
     case "claude":
       return new ClaudeProvider({ model: model ?? process.env.CLAUDE_MODEL });
     case "volcano":

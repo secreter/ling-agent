@@ -3,12 +3,15 @@ import * as readline from "readline";
 import { createToolRegistry } from "./tools/index.js";
 import { PermissionGuard, loadPermissionConfig } from "./permissions/index.js";
 
-const client = new OpenAI();
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+});
 const registry = createToolRegistry();
 const config = loadPermissionConfig();
 const guard = new PermissionGuard(config);
 
-const model = "gpt-4o";
+const model = process.env.LLM_MODEL || "gpt-4o";
 type Message = OpenAI.ChatCompletionMessageParam;
 
 const systemPrompt = `You are Ling, a coding assistant. You have access to tools to read, write, edit files, search code, and run commands. Use tools to accomplish tasks step by step.`;

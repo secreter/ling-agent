@@ -10,7 +10,10 @@ export async function runPrintMode(
   query: string,
   options: CliOptions
 ): Promise<void> {
-  const client = new OpenAI();
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.OPENAI_BASE_URL,
+  });
 
   // 构建 system prompt
   let systemPrompt = "You are Ling, a coding assistant.";

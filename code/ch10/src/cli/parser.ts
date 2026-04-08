@@ -39,7 +39,7 @@ export function parseCli(argv: string[]): CliOptions {
 
       // 模型
       provider: { type: "string",  default: "openai" },
-      model:    { type: "string",  short: "m", default: "gpt-4o" },
+      model:    { type: "string",  short: "m", default: process.env.LLM_MODEL || "gpt-4o" },
       "max-turns": { type: "string", default: "10" },
 
       // 会话

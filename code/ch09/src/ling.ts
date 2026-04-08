@@ -12,7 +12,10 @@ import {
 } from "./agents/index.js";
 import type { ToolEntry, ToolRegistry, SchedulerTask } from "./agents/index.js";
 
-const openai = new OpenAI();
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+});
 
 // ---- 工具注册表 ----
 
@@ -274,7 +277,7 @@ Each sub-agent runs independently with its own context.`,
   // Agent loop
   while (true) {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: process.env.LLM_MODEL || "gpt-4o",
       messages,
       tools: allTools,
     });

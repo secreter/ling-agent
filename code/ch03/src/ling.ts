@@ -2,9 +2,12 @@ import OpenAI from "openai";
 import * as readline from "readline";
 import { createToolRegistry } from "./tools/index.js";
 
-const client = new OpenAI(); // 从环境变量读 OPENAI_API_KEY
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+});
 const registry = createToolRegistry();
-const model = "gpt-4o";
+const model = process.env.LLM_MODEL || "gpt-4o";
 
 type Message = OpenAI.ChatCompletionMessageParam;
 
