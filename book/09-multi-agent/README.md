@@ -1,4 +1,4 @@
-# 多 Agent 协作——一个不够就来一群
+# 第 10 章 · 多 Agent 协作——一个不够就来一群
 
 你不会一个人又写代码又做 Code Review。
 
@@ -31,7 +31,7 @@ flowchart TD
 
 ---
 
-## 9.1 为什么需要子 Agent
+## 10.1 为什么需要子 Agent
 
 三个理由，每个都很实际。
 
@@ -53,7 +53,7 @@ Plan Agent 只分析不动手——它的工具列表里只有 `read_file`、`gr
 
 ---
 
-## 9.2 SubAgent 接口设计
+## 10.2 SubAgent 接口设计
 
 先定义子 Agent 长什么样：
 
@@ -114,7 +114,7 @@ type ToolRegistry = Map<string, ToolEntry>
 
 ---
 
-## 9.3 AgentSpawner：创建子 Agent
+## 10.3 AgentSpawner：创建子 Agent
 
 核心类。职责单一：接收一个 `SubAgentConfig`，创建一个独立的 Agent 实例，运行到完成。
 
@@ -251,7 +251,7 @@ export class AgentSpawner {
 
 ---
 
-## 9.4 预设角色
+## 10.4 预设角色
 
 每次手写 `SubAgentConfig` 太啰嗦。封装三个工厂函数：
 
@@ -322,7 +322,7 @@ Focus: ${focus}`,
 
 ---
 
-## 9.5 并行调度器
+## 10.5 并行调度器
 
 有了 Spawner，并行就是 `Promise.all` 的事：
 
@@ -441,7 +441,7 @@ export function summarizeResults(results: SubAgentResult[]): string {
 
 ---
 
-## 9.6 "agent" 工具：让 LLM 自己决定
+## 10.6 "agent" 工具：让 LLM 自己决定
 
 前面的 `runParallel` / `runSequential` 是你（开发者）手动编排的。但更灵活的方式是：把"启动子 Agent"包装成一个工具，让 LLM 自己决定什么时候需要子 Agent。
 
@@ -550,7 +550,7 @@ for (const call of msg.tool_calls) {
 
 ---
 
-## 9.7 实战：Express 迁移到 Hono
+## 10.7 实战：Express 迁移到 Hono
 
 把前面的零件组装起来，走一个完整的迁移流程。
 
@@ -653,7 +653,7 @@ console.log(summarizeResults([plan, ...codeResults, review]))
 
 ---
 
-## 9.8 Worktree 隔离（进阶）
+## 10.8 Worktree 隔离（进阶）
 
 上面的子 Agent 共享同一个工作目录——它们同时改文件。大多数情况下没问题，因为任务分配时已经按文件分组了。但如果两个子 Agent 不小心改了同一个文件呢？
 
@@ -703,7 +703,7 @@ function mergeWorktree(branch: string) {
 
 ---
 
-## 9.9 对照 Claude Code
+## 10.9 对照 Claude Code
 
 Claude Code 的子 Agent 实现比我们的 Ling 成熟得多，但核心思路完全一样。对照看一下：
 
@@ -743,7 +743,7 @@ Claude Code 内置了几种预设：
 
 **Worktree 隔离**
 
-Claude Code 的 agent 工具有一个 `isolation: "worktree"` 参数。启动子 Agent 时指定这个参数，子 Agent 就在 git worktree 里工作。跟我们 9.8 节讲的一样，但它是框架级的内置支持，不需要自己写 worktree 管理代码。
+Claude Code 的 agent 工具有一个 `isolation: "worktree"` 参数。启动子 Agent 时指定这个参数，子 Agent 就在 git worktree 里工作。跟我们 10.8 节讲的一样，但它是框架级的内置支持，不需要自己写 worktree 管理代码。
 
 **Hook 事件**
 
@@ -768,7 +768,7 @@ Claude Code 有 `SubagentStart` 和 `SubagentStop` 两个 Hook 事件——子 A
 
 ---
 
-## 9.10 小结
+## 10.10 小结
 
 这章做了什么：
 
@@ -784,3 +784,4 @@ Claude Code 有 `SubagentStart` 和 `SubagentStop` 两个 Hook 事件——子 A
 多 Agent 协作听起来很酷，但请记住：**一个 Agent 能搞定的事，不要用两个**。每多一个 Agent，就多一份 API 成本、多一个可能失败的环节、多一份需要聚合的结果。子 Agent 的使用场景是明确的——上下文装不下、需要并行加速、需要权限隔离。不是为了"用更多 Agent"而用。
 
 下一章把 Ling 从玩具变成能跑在生产环境的工具——非交互模式、结构化输出、CI/CD 集成、npm 发布。
+

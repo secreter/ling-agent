@@ -1,6 +1,6 @@
 // src/agents/types.ts — 子 Agent 的类型定义
 
-import type OpenAI from "openai";
+import type { Tool } from "../providers/index.js";
 
 /** 子 Agent 配置 */
 export interface SubAgentConfig {
@@ -32,9 +32,9 @@ export interface SubAgentResult {
   error?: string;
 }
 
-/** 完整的工具定义表（工具名 → OpenAI 工具定义 + 执行函数） */
+/** 完整的工具定义表（工具名 → 统一 Tool 定义 + 执行函数） */
 export interface ToolEntry {
-  definition: OpenAI.ChatCompletionTool;
+  definition: Tool;
   execute: (params: Record<string, unknown>) => Promise<string>;
 }
 

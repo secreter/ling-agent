@@ -112,6 +112,15 @@ graph TD
 
 ## 八个工具，逐个实现
 
+开始写代码之前，先把依赖装好：
+
+```bash
+npm install openai glob
+npm install -D tsx typescript
+```
+
+`openai` 是 LLM 调用库，`glob` 用于文件名匹配工具。`tsx` 让你直接运行 TypeScript，`typescript` 提供类型检查。
+
 下面一个一个来。每个工具都控制在 30 行以内，保持简单。
 
 ### 3.1 read_file：读文件

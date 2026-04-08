@@ -108,7 +108,14 @@ export class Compactor {
       messages: [
         {
           role: "system",
-          content: "Summarize this conversation concisely. Focus on: what the user asked, what tools were used, what was accomplished, and any important decisions. Keep it under 300 words.",
+          content: `你是一个对话摘要助手。请将以下对话历史压缩为简洁的摘要，保留：
+1. 用户提出的所有问题和需求
+2. Agent 做出的关键决策和操作结果
+3. 当前正在进行的任务状态
+4. 重要的文件路径、变量名等技术细节
+
+删除：重复的工具调用细节、冗长的文件内容、已解决的临时问题。
+输出格式：用中英文混合的简洁叙述，不超过 500 字。`,
         },
         { role: "user", content: formatted },
       ],

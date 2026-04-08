@@ -1,6 +1,7 @@
 // src/ling.ts — 集成多 Agent 的主循环（第 9 章版本）
 
-import OpenAI from "openai";
+import { initProvider } from "./providers/index.js";
+import type { Tool, Message } from "./providers/index.js";
 import {
   AgentSpawner,
   planAgent,
@@ -12,10 +13,7 @@ import {
 } from "./agents/index.js";
 import type { ToolEntry, ToolRegistry, SchedulerTask } from "./agents/index.js";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+const provider = initProvider();
 
 // ---- 工具注册表 ----
 
@@ -25,15 +23,12 @@ function buildToolRegistry(): ToolRegistry {
   // read_file
   registry.set("read_file", {
     definition: {
-      type: "function",
-      function: {
-        name: "read_file",
-        description: "Read a file and return its contents",
-        parameters: {
-          type: "object",
-          properties: { file_path: { type: "string" } },
-          required: ["file_path"],
-        },
+      name: "read_file",
+      description: "Read a file and return its contents",
+      parameters: {
+        type: "object",
+        properties: { file_path: { type: "string" } },
+        required: ["file_path"],
       },
     },
     execute: async (params) => {
@@ -45,19 +40,16 @@ function buildToolRegistry(): ToolRegistry {
   // edit_file
   registry.set("edit_file", {
     definition: {
-      type: "function",
-      function: {
-        name: "edit_file",
-        description: "Edit a file by replacing old_string with new_string",
-        parameters: {
-          type: "object",
-          properties: {
-            file_path: { type: "string" },
-            old_string: { type: "string" },
-            new_string: { type: "string" },
-          },
-          required: ["file_path", "old_string", "new_string"],
+      name: "edit_file",
+      description: "Edit a file by replacing old_string with new_string",
+      parameters: {
+        type: "object",
+        properties: {
+          file_path: { type: "string" },
+          old_string: { type: "string" },
+          new_string: { type: "string" },
         },
+        required: ["file_path", "old_string", "new_string"],
       },
     },
     execute: async (params) => {
@@ -73,15 +65,12 @@ function buildToolRegistry(): ToolRegistry {
   // bash
   registry.set("bash", {
     definition: {
-      type: "function",
-      function: {
-        name: "bash",
-        description: "Execute a shell command",
-        parameters: {
-          type: "object",
-          properties: { command: { type: "string" } },
-          required: ["command"],
-        },
+      name: "bash",
+      description: "Execute a shell command",
+      parameters: {
+        type: "object",
+        properties: { command: { type: "string" } },
+        required: ["command"],
       },
     },
     execute: async (params) => {
@@ -100,18 +89,15 @@ function buildToolRegistry(): ToolRegistry {
   // grep
   registry.set("grep", {
     definition: {
-      type: "function",
-      function: {
-        name: "grep",
-        description: "Search for a pattern in files",
-        parameters: {
-          type: "object",
-          properties: {
-            pattern: { type: "string" },
-            path: { type: "string" },
-          },
-          required: ["pattern"],
+      name: "grep",
+      description: "Search for a pattern in files",
+      parameters: {
+        type: "object",
+        properties: {
+          pattern: { type: "string" },
+          path: { type: "string" },
         },
+        required: ["pattern"],
       },
     },
     execute: async (params) => {
@@ -131,15 +117,12 @@ function buildToolRegistry(): ToolRegistry {
   // glob
   registry.set("glob", {
     definition: {
-      type: "function",
-      function: {
-        name: "glob",
-        description: "List files matching a glob pattern",
-        parameters: {
-          type: "object",
-          properties: { pattern: { type: "string" } },
-          required: ["pattern"],
-        },
+      name: "glob",
+      description: "List files matching a glob pattern",
+      parameters: {
+        type: "object",
+        properties: { pattern: { type: "string" } },
+        required: ["pattern"],
       },
     },
     execute: async (params) => {
@@ -158,15 +141,12 @@ function buildToolRegistry(): ToolRegistry {
   // list_files
   registry.set("list_files", {
     definition: {
-      type: "function",
-      function: {
-        name: "list_files",
-        description: "List files in a directory",
-        parameters: {
-          type: "object",
-          properties: { path: { type: "string" } },
-          required: ["path"],
-        },
+      name: "list_files",
+      description: "List files in a directory",
+      parameters: {
+        type: "object",
+        properties: { path: { type: "string" } },
+        required: ["path"],
       },
     },
     execute: async (params) => {
@@ -185,31 +165,28 @@ function buildToolRegistry(): ToolRegistry {
 
 function buildAgentTool(
   spawner: AgentSpawner
-): OpenAI.ChatCompletionTool {
+): Tool {
   return {
-    type: "function",
-    function: {
-      name: "agent",
-      description: `Launch a sub-agent to handle a task independently. The sub-agent has its own context and tools. Available roles: plan (read-only analysis), code (full tools), review (read-only review).`,
-      parameters: {
-        type: "object",
-        properties: {
-          role: {
-            type: "string",
-            enum: ["plan", "code", "review"],
-            description: "The role of the sub-agent",
-          },
-          name: {
-            type: "string",
-            description: "A short name for this sub-agent (e.g. 'route-migrator')",
-          },
-          task: {
-            type: "string",
-            description: "The specific task for the sub-agent",
-          },
+    name: "agent",
+    description: `Launch a sub-agent to handle a task independently. The sub-agent has its own context and tools. Available roles: plan (read-only analysis), code (full tools), review (read-only review).`,
+    parameters: {
+      type: "object",
+      properties: {
+        role: {
+          type: "string",
+          enum: ["plan", "code", "review"],
+          description: "The role of the sub-agent",
         },
-        required: ["role", "task"],
+        name: {
+          type: "string",
+          description: "A short name for this sub-agent (e.g. 'route-migrator')",
+        },
+        task: {
+          type: "string",
+          description: "The specific task for the sub-agent",
+        },
       },
+      required: ["role", "task"],
     },
   };
 }
@@ -249,17 +226,17 @@ async function executeAgentTool(
 
 async function main() {
   const toolRegistry = buildToolRegistry();
-  const spawner = new AgentSpawner(openai, toolRegistry);
+  const spawner = new AgentSpawner(provider, toolRegistry);
 
   // 把所有内置工具 + agent 工具合并
-  const allTools: OpenAI.ChatCompletionTool[] = [
+  const allTools: Tool[] = [
     ...Array.from(toolRegistry.values()).map((t) => t.definition),
     buildAgentTool(spawner),
   ];
 
   console.log(`Ling ready. ${allTools.length} tools available (including agent tool).\n`);
 
-  const messages: OpenAI.ChatCompletionMessageParam[] = [
+  const messages: Message[] = [
     {
       role: "system",
       content: `You are Ling, a coding assistant. You can launch sub-agents for complex tasks:
@@ -276,25 +253,25 @@ Each sub-agent runs independently with its own context.`,
 
   // Agent loop
   while (true) {
-    const response = await openai.chat.completions.create({
-      model: process.env.LLM_MODEL || "gpt-4o",
-      messages,
-      tools: allTools,
+    const response = await provider.chat(messages, allTools);
+
+    // 把 assistant 消息加入历史
+    messages.push({
+      role: "assistant",
+      content: response.content ?? "",
+      toolCalls: response.toolCalls.length > 0 ? response.toolCalls : undefined,
     });
 
-    const msg = response.choices[0].message;
-    messages.push(msg);
-
-    if (!msg.tool_calls || msg.tool_calls.length === 0) {
-      console.log(`Ling: ${msg.content}\n`);
+    if (response.toolCalls.length === 0) {
+      console.log(`Ling: ${response.content}\n`);
       break;
     }
 
-    for (const call of msg.tool_calls) {
-      const toolName = call.function.name;
-      const params = JSON.parse(call.function.arguments);
+    for (const call of response.toolCalls) {
+      const toolName = call.name;
+      const params = JSON.parse(call.arguments);
 
-      console.log(`[tool] ${toolName}(${call.function.arguments.slice(0, 120)})`);
+      console.log(`[tool] ${toolName}(${call.arguments.slice(0, 120)})`);
 
       let result: string;
 
@@ -315,7 +292,7 @@ Each sub-agent runs independently with its own context.`,
 
       messages.push({
         role: "tool",
-        tool_call_id: call.id,
+        toolCallId: call.id,
         content: result,
       });
     }

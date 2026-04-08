@@ -21,11 +21,13 @@ ch01  单文件 Agent（50 行）
  │
  ├→ ch07  会话与记忆（加 session/）
  │
- ├→ ch08  Hook + MCP（加 hooks/、mcp/、mcp-servers/）
+ ├→ ch08  Hook 系统（加 hooks/）
  │
- ├→ ch09  多 Agent（加 agents/）
+ ├→ ch09  MCP（加 mcp/、mcp-servers/）
  │
- └→ ch10  生产级 CLI（加 cli/）
+ ├→ ch10  多 Agent（加 agents/）
+ │
+ └→ ch11  生产级 CLI（加 cli/）
 ```
 
 每章新增一个目录，不修改之前的模块接口。这意味着你可以从任意一章开始看代码，只要先理解它依赖的模块就行。
@@ -127,7 +129,7 @@ ch01  单文件 Agent（50 行）
 
 ---
 
-## ch08 · Hook 系统与 MCP
+## ch08 · Hook 系统
 
 | 文件 | 作用 |
 |------|------|
@@ -136,6 +138,13 @@ ch01  单文件 Agent（50 行）
 | `src/hooks/engine.ts` | Hook 引擎：注册 handler、按事件类型分发 |
 | `src/hooks/config.ts` | 从配置文件加载 hook 定义 |
 | `src/hooks/index.ts` | 统一导出 |
+
+---
+
+## ch09 · MCP
+
+| 文件 | 作用 |
+|------|------|
 | `src/mcp/types.ts` | MCP 消息类型定义（JSON-RPC 2.0） |
 | `src/mcp/client.ts` | MCP 客户端：初始化连接、调用 tools/list、调用 tools/call |
 | `src/mcp/loader.ts` | MCP Server 加载器：读配置、启动进程、建立 stdio 通信 |
@@ -144,7 +153,7 @@ ch01  单文件 Agent（50 行）
 
 ---
 
-## ch09 · 多 Agent 调度
+## ch10 · 多 Agent 调度
 
 | 文件 | 作用 |
 |------|------|
@@ -156,7 +165,7 @@ ch01  单文件 Agent（50 行）
 
 ---
 
-## ch10 · 生产级 CLI
+## ch11 · 生产级 CLI
 
 | 文件 | 作用 |
 |------|------|

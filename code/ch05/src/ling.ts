@@ -1,39 +1,53 @@
-import OpenAI from "openai";
 import * as readline from "readline";
 import { createToolRegistry } from "./tools/index.js";
 import { PermissionGuard, loadPermissionConfig } from "./permissions/index.js";
+import { createProvider } from "./providers/factory.js";
+import type { Message, ToolDefinition } from "./providers/types.js";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
 const registry = createToolRegistry();
 const config = loadPermissionConfig();
 const guard = new PermissionGuard(config);
-
-const model = process.env.LLM_MODEL || "gpt-4o";
-type Message = OpenAI.ChatCompletionMessageParam;
+const provider = createProvider();
 
 const systemPrompt = `You are Ling, a coding assistant. You have access to tools to read, write, edit files, search code, and run commands. Use tools to accomplish tasks step by step.`;
+
+// 将 ToolRegistry 的工具转成 Provider 通用格式
+function getToolDefinitions(): ToolDefinition[] {
+  return registry.list().map((tool) => ({
+    type: "function" as const,
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.schema,
+    },
+  }));
+}
 
 async function agentLoop(userMessage: string, history: Message[]): Promise<string> {
   history.push({ role: "user", content: userMessage });
 
+  const tools = getToolDefinitions();
+
   while (true) {
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: "system", content: systemPrompt }, ...history],
-      tools: registry.toOpenAITools(),
-    });
+    const response = await provider.chat(
+      [{ role: "system", content: systemPrompt }, ...history],
+      tools,
+    );
 
-    const message = response.choices[0].message;
-    history.push(message as Message);
-
-    if (!message.tool_calls || message.tool_calls.length === 0) {
-      return message.content ?? "(no response)";
+    if (response.toolCalls.length === 0) {
+      const content = response.content ?? "(no response)";
+      history.push({ role: "assistant", content });
+      return content;
     }
 
-    for (const toolCall of message.tool_calls) {
+    // 记录 assistant 消息（含工具调用）
+    history.push({
+      role: "assistant",
+      content: response.content,
+      tool_calls: response.toolCalls,
+    });
+
+    for (const toolCall of response.toolCalls) {
       const name = toolCall.function.name;
       const params = JSON.parse(toolCall.function.arguments);
 
@@ -76,6 +90,7 @@ async function main() {
 
   const history: Message[] = [];
   console.log("Ling Agent (ch05) — permission system enabled");
+  console.log(`Provider: ${provider.name}`);
   console.log(`Project root: ${config.projectRoot}`);
   console.log(`Rules loaded: ${config.rules.length}\n`);
 

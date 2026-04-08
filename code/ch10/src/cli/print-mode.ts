@@ -1,6 +1,6 @@
 // Print 模式——非交互执行，跑完即退
 
-import OpenAI from "openai";
+import type { LLMProvider, Tool, Message } from "../providers/index.js";
 import type { CliOptions } from "./parser.js";
 import { writeOutput, writeStreamEvent } from "./output.js";
 import { loadSchema, extractJson, validateAgainstSchema } from "./schema-validator.js";
@@ -10,13 +10,9 @@ import { PermissionGuard, loadPermissionConfig } from "../permissions/index.js";
 /** 非交互模式主函数 */
 export async function runPrintMode(
   query: string,
-  options: CliOptions
+  options: CliOptions,
+  provider: LLMProvider
 ): Promise<void> {
-  const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    baseURL: process.env.OPENAI_BASE_URL,
-  });
-
   // 初始化工具注册表和权限守卫
   const registry = createToolRegistry();
   const permConfig = loadPermissionConfig();
@@ -32,7 +28,14 @@ export async function runPrintMode(
     systemPrompt += "\n\n" + schemaConstraint.promptInstructions;
   }
 
-  const messages: OpenAI.ChatCompletionMessageParam[] = [
+  // 把 ch10 的 Tool 注册表转成 Provider 统一的 Tool 格式
+  const tools: Tool[] = registry.list().map((t) => ({
+    name: t.name,
+    description: t.description,
+    parameters: t.schema,
+  }));
+
+  const messages: Message[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: query },
   ];
@@ -49,14 +52,8 @@ export async function runPrintMode(
   while (turns < options.maxTurns) {
     turns++;
 
-    const response = await client.chat.completions.create({
-      model: options.model,
-      messages,
-      tools: registry.toOpenAITools(),
-    });
-
-    const message = response.choices[0].message;
-    finalContent = message.content ?? "";
+    const response = await provider.chat(messages, tools);
+    finalContent = response.content ?? "";
 
     // stream 模式实时输出
     if (options.format === "stream" && finalContent) {
@@ -64,29 +61,38 @@ export async function runPrintMode(
     }
 
     // 没有 tool_calls，结束循环
-    if (!message.tool_calls || message.tool_calls.length === 0) {
+    if (response.toolCalls.length === 0) {
+      // 把最后的 assistant 消息加入历史
+      messages.push({
+        role: "assistant",
+        content: finalContent,
+      });
       break;
     }
 
     // 有 tool_calls 就执行
-    messages.push(message as OpenAI.ChatCompletionMessageParam);
+    messages.push({
+      role: "assistant",
+      content: finalContent,
+      toolCalls: response.toolCalls,
+    });
 
-    for (const toolCall of message.tool_calls) {
-      const toolName = toolCall.function.name;
+    for (const toolCall of response.toolCalls) {
+      const toolName = toolCall.name;
       let args: Record<string, unknown>;
       try {
-        args = JSON.parse(toolCall.function.arguments);
+        args = JSON.parse(toolCall.arguments);
       } catch {
         // LLM 返回了无效 JSON，尝试修复常见问题
-        const fixed = toolCall.function.arguments
+        const fixed = toolCall.arguments
           .replace(/float\('inf'\)/g, "null")
           .replace(/float\('nan'\)/g, "null")
           .replace(/'/g, '"');
         try {
           args = JSON.parse(fixed);
         } catch {
-          const errorResult = `Error: invalid tool arguments: ${toolCall.function.arguments}`;
-          messages.push({ role: "tool", tool_call_id: toolCall.id, content: errorResult });
+          const errorResult = `Error: invalid tool arguments: ${toolCall.arguments}`;
+          messages.push({ role: "tool", toolCallId: toolCall.id, content: errorResult });
           continue;
         }
       }
@@ -118,7 +124,7 @@ export async function runPrintMode(
 
       messages.push({
         role: "tool",
-        tool_call_id: toolCall.id,
+        toolCallId: toolCall.id,
         content: result,
       });
     }
