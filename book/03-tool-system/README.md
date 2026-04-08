@@ -96,6 +96,20 @@ export class ToolRegistry {
 
 `toOpenAITools()` 是关键方法——它把我们的工具定义转换成 OpenAI API 要求的格式。这样 Agent Loop 里直接 `tools: registry.toOpenAITools()` 就行了。
 
+```mermaid
+graph TD
+  Registry["ToolRegistry"] --> RF["read_file<br/>读文件"]
+  Registry --> WF["write_file<br/>写文件"]
+  Registry --> EF["edit_file<br/>精确编辑"]
+  Registry --> GR["grep<br/>搜索内容"]
+  Registry --> GL["glob<br/>匹配文件名"]
+  Registry --> BA["bash<br/>执行命令"]
+  Registry --> LF["list_files<br/>目录列表"]
+  Registry --> AU["ask_user<br/>向用户提问"]
+  Loop["Agent Loop"] -->|"registry.toOpenAITools()"| Registry
+  Loop -->|"registry.execute(name, params)"| Registry
+```
+
 ## 八个工具，逐个实现
 
 下面一个一个来。每个工具都控制在 30 行以内，保持简单。

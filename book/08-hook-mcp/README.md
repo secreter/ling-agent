@@ -13,6 +13,25 @@
 
 Hook 管的是"Agent 做事的时候顺便做点别的"，MCP 管的是"给 Agent 新的能力"。一个是切面，一个是插件。
 
+```mermaid
+flowchart LR
+  subgraph Hook事件流
+    direction TB
+    SS["SessionStart"] --> Pre["PreToolUse<br/>拦截/修改参数"]
+    Pre --> Exec["工具执行"]
+    Exec --> Post["PostToolUse<br/>自动lint/记日志"]
+    Post --> Stop["Stop<br/>发通知/写摘要"]
+  end
+
+  subgraph MCP通信
+    direction TB
+    Agent["Agent"] -->|"JSON-RPC"| Client["MCP Client"]
+    Client -->|"stdio/HTTP"| Server["MCP Server<br/>(外部进程)"]
+    Server -->|"tools/list"| Client
+    Server -->|"tools/call 结果"| Client
+  end
+```
+
 ---
 
 ## 上半章：Hook 系统

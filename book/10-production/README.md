@@ -14,6 +14,24 @@ Agent 不只是给人用的，也是给机器用的。
 
 这章搞定这件事。
 
+```mermaid
+flowchart TD
+  Start["ling 启动"] --> Parse["解析CLI参数"]
+  Parse --> Help{"--help/--version?"}
+  Help -->|"是"| PrintHelp["输出信息并退出"]
+  Help -->|"否"| Mode{"-p 参数?"}
+  Mode -->|"有: 非交互"| Stdin{"检测stdin管道?"}
+  Stdin -->|"有管道数据"| Combine["拼接stdin+query"]
+  Stdin -->|"无"| Query["直接用query"]
+  Combine --> Agent["Agent Loop(单次)"]
+  Query --> Agent
+  Agent --> Format{"--format?"}
+  Format -->|"text"| OutText["输出纯文本"]
+  Format -->|"json"| OutJSON["输出JSON对象"]
+  Format -->|"stream"| OutStream["输出NDJSON事件流"]
+  Mode -->|"无: 交互"| REPL["进入REPL循环"]
+```
+
 ---
 
 ## 10.1 Print 模式——非交互执行

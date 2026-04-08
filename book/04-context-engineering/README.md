@@ -240,6 +240,17 @@ my-company/
 
 两个限制：200 行、25KB。用户不该在 `.ling.md` 里贴整本代码规范——那是浪费 token。精炼的规则才有用。
 
+```mermaid
+graph TD
+  SP["System Prompt"] --> L1["第一层：角色定义<br/>你是Ling, 能读文件/跑命令/搜索/编辑"]
+  SP --> L2["第二层：通用规则<br/>先读再改/不跑危险命令/不确定就问"]
+  SP --> L3["第三层：项目状态(动态)<br/>项目类型/技术栈/Git状态/目录结构"]
+  SP --> L4["第四层：用户指令<br/>.ling.md 项目规则"]
+  L3 --> Det["project-detector.ts<br/>检测package.json/go.mod等"]
+  L3 --> Git["Git信息采集<br/>status + recent commits"]
+  L4 --> Load["ling-md.ts<br/>从cwd往上遍历加载"]
+```
+
 ## 组装完整的 System Prompt
 
 四层合在一起：

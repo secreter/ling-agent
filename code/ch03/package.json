@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/ling.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "node --import tsx --test src/tools/__tests__/tools.test.ts"
   },
   "dependencies": {
     "openai": "^4.78.0",

@@ -4,6 +4,8 @@ import OpenAI from "openai";
 import type { CliOptions } from "./parser.js";
 import { writeOutput, writeStreamEvent } from "./output.js";
 import { loadSchema, extractJson, validateAgainstSchema } from "./schema-validator.js";
+import { createToolRegistry } from "../tools/index.js";
+import { PermissionGuard, loadPermissionConfig } from "../permissions/index.js";
 
 /** 非交互模式主函数 */
 export async function runPrintMode(
@@ -14,6 +16,11 @@ export async function runPrintMode(
     apiKey: process.env.OPENAI_API_KEY,
     baseURL: process.env.OPENAI_BASE_URL,
   });
+
+  // 初始化工具注册表和权限守卫
+  const registry = createToolRegistry();
+  const permConfig = loadPermissionConfig();
+  const guard = new PermissionGuard(permConfig);
 
   // 构建 system prompt
   let systemPrompt = "You are Ling, a coding assistant.";
@@ -38,13 +45,14 @@ export async function runPrintMode(
   let turns = 0;
   let finalContent = "";
 
-  // Agent loop——和交互模式共享同一个循环逻辑
+  // Agent loop——带工具调用的循环
   while (turns < options.maxTurns) {
     turns++;
 
     const response = await client.chat.completions.create({
       model: options.model,
       messages,
+      tools: registry.toOpenAITools(),
     });
 
     const message = response.choices[0].message;
@@ -60,23 +68,52 @@ export async function runPrintMode(
       break;
     }
 
-    // 有 tool_calls 就继续执行……（此处省略工具执行，和前几章一样）
+    // 有 tool_calls 就执行
     messages.push(message as OpenAI.ChatCompletionMessageParam);
 
     for (const toolCall of message.tool_calls) {
+      const toolName = toolCall.function.name;
+      let args: Record<string, unknown>;
+      try {
+        args = JSON.parse(toolCall.function.arguments);
+      } catch {
+        // LLM 返回了无效 JSON，尝试修复常见问题
+        const fixed = toolCall.function.arguments
+          .replace(/float\('inf'\)/g, "null")
+          .replace(/float\('nan'\)/g, "null")
+          .replace(/'/g, '"');
+        try {
+          args = JSON.parse(fixed);
+        } catch {
+          const errorResult = `Error: invalid tool arguments: ${toolCall.function.arguments}`;
+          messages.push({ role: "tool", tool_call_id: toolCall.id, content: errorResult });
+          continue;
+        }
+      }
+
       if (options.format === "stream") {
         writeStreamEvent({
           type: "tool_use",
-          tool: toolCall.function.name,
-          args: JSON.parse(toolCall.function.arguments),
+          tool: toolName,
+          args,
         });
       }
 
-      // 工具执行逻辑（复用之前章节的 tool registry）
-      const result = `Tool ${toolCall.function.name} executed`;
+      // 权限检查
+      let result: string;
+      const allowed = await guard.check(toolName, args);
+      if (!allowed) {
+        result = `[Permission denied] Tool "${toolName}" was blocked by permission guard.`;
+      } else {
+        try {
+          result = await registry.execute(toolName, args);
+        } catch (err) {
+          result = `Error executing ${toolName}: ${(err as Error).message}`;
+        }
+      }
 
       if (options.format === "stream") {
-        writeStreamEvent({ type: "tool_result", tool: toolCall.function.name, result });
+        writeStreamEvent({ type: "tool_result", tool: toolName, result });
       }
 
       messages.push({

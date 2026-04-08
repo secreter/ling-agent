@@ -28,8 +28,19 @@ rm -rf /tmp/my-project-*
 
 我们需要的是三层过滤：
 
-```
-Deny（黑名单） → Ask（确认） → Allow（白名单）
+```mermaid
+flowchart TD
+  Start["工具调用请求"] --> Boundary{"文件系统边界检查<br/>路径在项目内?"}
+  Boundary -->|"越界"| Reject["拒绝"]
+  Boundary -->|"通过"| Protected{"受保护路径?<br/>.git/.env/密钥等"}
+  Protected -->|"匹配"| AskUser1["要求用户确认"]
+  Protected -->|"不匹配"| Deny{"匹配Deny规则?<br/>rm -rf/dd/curl|bash"}
+  Deny -->|"匹配"| Reject
+  Deny -->|"不匹配"| Ask{"匹配Ask规则?"}
+  Ask -->|"匹配"| AskUser2["要求用户确认"]
+  Ask -->|"不匹配"| Allow{"匹配Allow规则?<br/>read_file/grep/git status"}
+  Allow -->|"匹配"| Pass["放行执行"]
+  Allow -->|"不匹配"| AskUser3["兜底：要求确认"]
 ```
 
 **为什么这个顺序很重要？**

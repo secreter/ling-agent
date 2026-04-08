@@ -64,6 +64,31 @@ data: {"type":"message_stop"}
 - Claude 有明确的 `content_block_start` / `content_block_stop` 边界，OpenAI 靠 `id` 字段出现来标记开始
 - Claude 的工具参数字段叫 `partial_json`，OpenAI 叫 `arguments`
 
+```mermaid
+sequenceDiagram
+  participant User as 用户终端
+  participant Loop as Agent Loop
+  participant Provider as LLM Provider
+  participant LLM as LLM API (SSE)
+  participant Tool as 工具系统
+
+  User->>Loop: 用户输入
+  Loop->>Provider: stream(messages, tools)
+  Provider->>LLM: HTTP请求 (stream:true)
+  LLM-->>Provider: text chunk
+  Provider-->>Loop: StreamChunk(text)
+  Loop-->>User: 逐字渲染到终端
+  LLM-->>Provider: tool_call chunks
+  Provider-->>Loop: StreamChunk(tool_call_start/delta/end)
+  Loop->>Loop: ToolCallCollector 拼装完整调用
+  Loop->>Tool: 执行工具(带Spinner)
+  Tool-->>Loop: 工具结果
+  Loop->>Provider: stream(messages+结果, tools)
+  LLM-->>Provider: text chunks
+  Provider-->>Loop: StreamChunk(text)
+  Loop-->>User: 逐字渲染最终回复
+```
+
 ### 统一抽象：StreamChunk
 
 每家协议都自己解析一遍太累了。我们定义一套统一的 `StreamChunk` 类型，各家 Provider 负责把自己的格式转成这个：

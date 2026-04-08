@@ -4,7 +4,10 @@
 // 这是所有前面章节的集大成
 
 import * as readline from "readline";
+import OpenAI from "openai";
 import { parseCli, readStdin, runPrintMode } from "./cli/index.js";
+import { createToolRegistry } from "./tools/index.js";
+import { PermissionGuard, loadPermissionConfig } from "./permissions/index.js";
 
 const VERSION = "0.10.0";
 
@@ -61,6 +64,19 @@ async function main() {
   // ---- 交互模式（REPL）----
   console.log(`Ling Agent v${VERSION}\n`);
 
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.OPENAI_BASE_URL,
+  });
+
+  const registry = createToolRegistry();
+  const permConfig = loadPermissionConfig();
+  const guard = new PermissionGuard(permConfig);
+
+  const messages: OpenAI.ChatCompletionMessageParam[] = [
+    { role: "system", content: "You are Ling, a coding assistant." },
+  ];
+
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -74,8 +90,76 @@ async function main() {
         return;
       }
 
-      // 简化版——实际会复用前几章的 agentLoop
-      console.log(`\nLing: [response to "${input}"]\n`);
+      messages.push({ role: "user", content: input });
+
+      let turns = 0;
+      while (turns < options.maxTurns) {
+        turns++;
+
+        const response = await client.chat.completions.create({
+          model: options.model,
+          messages,
+          tools: registry.toOpenAITools(),
+        });
+
+        const message = response.choices[0].message;
+
+        if (message.content) {
+          console.log(`\nLing: ${message.content}\n`);
+        }
+
+        // 没有 tool_calls，结束循环
+        if (!message.tool_calls || message.tool_calls.length === 0) {
+          messages.push(message as OpenAI.ChatCompletionMessageParam);
+          break;
+        }
+
+        // 有 tool_calls 就执行
+        messages.push(message as OpenAI.ChatCompletionMessageParam);
+
+        for (const toolCall of message.tool_calls) {
+          const toolName = toolCall.function.name;
+          let args: Record<string, unknown>;
+          try {
+            args = JSON.parse(toolCall.function.arguments);
+          } catch {
+            const fixed = toolCall.function.arguments
+              .replace(/float\('inf'\)/g, "null")
+              .replace(/float\('nan'\)/g, "null")
+              .replace(/'/g, '"');
+            try {
+              args = JSON.parse(fixed);
+            } catch {
+              const errorResult = `Error: invalid tool arguments: ${toolCall.function.arguments}`;
+              messages.push({ role: "tool", tool_call_id: toolCall.id, content: errorResult });
+              continue;
+            }
+          }
+
+          console.log(`\n[Tool: ${toolName}] args: ${JSON.stringify(args)}`);
+
+          let result: string;
+          const allowed = await guard.check(toolName, args);
+          if (!allowed) {
+            result = `[Permission denied] Tool "${toolName}" was blocked by permission guard.`;
+          } else {
+            try {
+              result = await registry.execute(toolName, args);
+            } catch (err) {
+              result = `Error executing ${toolName}: ${(err as Error).message}`;
+            }
+          }
+
+          console.log(`[Result] ${result.length > 200 ? result.slice(0, 200) + "..." : result}`);
+
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: result,
+          });
+        }
+      }
+
       prompt();
     });
   };

@@ -15,3 +15,4 @@ export {
   summarizeResults,
 } from "./scheduler.js";
 export type { SchedulerTask } from "./scheduler.js";
+export { createWorktree, removeWorktree, withWorktree } from "./worktree.js";

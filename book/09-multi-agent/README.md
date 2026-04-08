@@ -14,6 +14,21 @@ Agent 也一样。
 
 正确的做法：分工。
 
+```mermaid
+flowchart TD
+  User["用户: 把Express迁移到Hono"] --> Main["主Agent(父Agent)"]
+  Main --> Plan["Plan Agent<br/>只读分析<br/>输出迁移计划"]
+  Plan --> Dispatch["任务分发"]
+  Dispatch --> Code1["Code Agent 1<br/>迁移路由文件"]
+  Dispatch --> Code2["Code Agent 2<br/>迁移中间件"]
+  Dispatch --> Code3["Code Agent 3<br/>迁移配置+依赖"]
+  Code1 --> Merge["结果聚合"]
+  Code2 --> Merge
+  Code3 --> Merge
+  Merge --> Review["Review Agent<br/>只读审查<br/>检查一致性"]
+  Review --> Result["输出最终报告"]
+```
+
 ---
 
 ## 9.1 为什么需要子 Agent

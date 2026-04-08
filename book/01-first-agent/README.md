@@ -179,6 +179,17 @@ async function agent(userMessage: string) {
 
 整个流程是这样的：
 
+```mermaid
+flowchart TD
+  A["用户发消息"] --> B["发送消息+工具列表给LLM"]
+  B --> C{"LLM返回<br/>finish_reason?"}
+  C -->|"tool_calls"| D["解析工具名和参数"]
+  D --> E["执行工具函数"]
+  E --> F["将结果以tool角色<br/>塞回messages"]
+  F --> B
+  C -->|"stop"| G["输出最终回复"]
+```
+
 1. 用户说了一句话（比如"读 package.json 并总结这个项目"）
 2. 把用户消息连同工具列表发给 LLM
 3. LLM 看看用户想干嘛，决定要不要用工具。如果要用，它会在响应里说"我想调 `read_file`，参数是 `{"file_path": "package.json"}`"

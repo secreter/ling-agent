@@ -10,54 +10,41 @@
 
 ## 11.1 Ling 全架构图
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         CLI Layer                               │
-│  parser.ts · schema-validator.ts · output.ts                    │
-│  (参数解析 / --print-mode / JSON 输出格式化)                     │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────────┐
-│                       Agent Loop (ling.ts)                       │
-│  ┌─────────┐  ┌──────────────┐  ┌───────────┐  ┌────────────┐  │
-│  │ 发请求   │→│ 解析 response │→│ 工具调用？ │→│ 追加结果    │  │
-│  └─────────┘  └──────────────┘  │  Y → 执行  │  │ 继续循环    │  │
-│                                 │  N → 输出  │  └────────────┘  │
-│                                 └───────────┘                   │
-└───┬──────────┬──────────┬──────────┬──────────┬─────────────────┘
-    │          │          │          │          │
-    ▼          ▼          ▼          ▼          ▼
-┌────────┐┌────────┐┌─────────┐┌─────────┐┌──────────────┐
-│Provider││  Tool  ││ Context ││ Session ││  Hook Engine │
-│ Layer  ││ System ││ Engine  ││& Memory ││              │
-└───┬────┘└───┬────┘└────┬────┘└────┬────┘└──────┬───────┘
-    │         │          │          │             │
-    ▼         ▼          ▼          ▼             ▼
-┌────────┐┌────────┐┌─────────┐┌─────────┐┌──────────────┐
-│Volcano ││8 内置  ││system   ││ store   ││ PreToolUse   │
-│Claude  ││工具    ││prompt   ││ .ts     ││ PostToolUse  │
-│OpenAI  ││+ MCP   ││.ling.md ││memory   ││ SessionStart │
-│        ││扩展工具 ││project  ││ .ts     ││ SessionEnd   │
-└────────┘│        ││detector │└─────────┘└──────────────┘
-          │        ││compactor│
-          ▼        │└─────────┘
-    ┌──────────┐   │
-    │Permission│   │
-    │  Guard   │   │
-    └──────────┘   │
-                   ▼
-             ┌───────────┐
-             │ MCP Client│──→ stdio / HTTP
-             │  loader   │    外部 Server
-             └───────────┘
-                   │
-                   ▼
-             ┌───────────┐
-             │ Sub-Agent  │
-             │ Scheduler  │
-             │ (spawner   │
-             │  + roles)  │
-             └───────────┘
+```mermaid
+graph TD
+  CLI["CLI Layer<br/>parser.ts / schema-validator.ts / output.ts"]
+  CLI --> Loop["Agent Loop<br/>ling.ts"]
+  Loop --> Provider["Provider Layer"]
+  Loop --> Tools["Tool System"]
+  Loop --> Context["Context Engine"]
+  Loop --> Session["Session & Memory"]
+  Loop --> Hooks["Hook Engine"]
+
+  Provider --> Volcano["Volcano<br/>火山引擎"]
+  Provider --> Claude["Claude"]
+  Provider --> OAI["OpenAI"]
+
+  Tools --> Builtin["8个内置工具"]
+  Tools --> MCP["MCP扩展工具"]
+  Tools --> Perm["Permission Guard<br/>权限检查"]
+
+  Context --> SysPrompt["system prompt"]
+  Context --> LingMd[".ling.md"]
+  Context --> Detector["project detector"]
+  Context --> Compactor["compactor<br/>上下文压缩"]
+
+  Session --> Store["SessionStore<br/>JSON文件"]
+  Session --> Memory["MemoryStore<br/>跨会话记忆"]
+
+  Hooks --> Pre["PreToolUse"]
+  Hooks --> Post["PostToolUse"]
+  Hooks --> SS["SessionStart"]
+  Hooks --> Stop["Stop"]
+
+  MCP --> MCPClient["MCP Client<br/>stdio/HTTP"]
+  MCPClient --> ExtServer["外部MCP Server"]
+
+  Loop --> SubAgent["Sub-Agent Scheduler<br/>spawner + roles"]
 ```
 
 每个模块对应一章的内容：
@@ -154,7 +141,7 @@ Agent 领域变化很快。以下三个方向值得持续关注。
 Agent 不再局限于代码和命令行，开始操控 GUI。
 
 - **Anthropic Computer Use**（https://docs.anthropic.com/en/docs/agents-and-tools/computer-use）：Claude 直接操控桌面，看截图、移鼠标、敲键盘。
-- **Playwright MCP Server**（https://github.com/anthropics/mcp-server-playwright）：通过 MCP 协议让 Agent 控制浏览器，执行自动化测试。
+- **Playwright MCP Server**（https://github.com/microsoft/playwright-mcp）：通过 MCP 协议让 Agent 控制浏览器，执行自动化测试。
 - **OpenAI Operator**（https://openai.com/operator）：GPT-4o 驱动的浏览器操控代理，面向终端用户。
 
 这个方向的核心难题是视觉理解的准确率——截图里一个按钮识别错了，整个操作链就跑偏了。

@@ -8,6 +8,24 @@
 1. **Session**——把对话历史存到磁盘，下次能接着聊
 2. **Memory**——跨会话的长期记忆，让 Agent 记住你的偏好和项目约定
 
+```mermaid
+graph TD
+  Start["ling 启动"] --> Check{"命令行参数?"}
+  Check -->|"--continue"| Latest["加载最近会话"]
+  Check -->|"--resume id"| Load["加载指定会话"]
+  Check -->|"无参数"| Create["创建新会话"]
+  Latest --> REPL["进入REPL循环"]
+  Load --> REPL
+  Create --> REPL
+  REPL --> Input["用户输入"]
+  Input --> Agent["Agent Loop处理"]
+  Agent --> Save["自动保存到JSON文件"]
+  Save --> Input
+  Input -->|"/compact"| Compact["压缩旧消息为摘要"]
+  Compact --> Input
+  Input -->|"退出"| End["会话持久化在<br/>~/.ling/sessions/"]
+```
+
 ## 7.1 Session 数据结构
 
 先想清楚一个 Session 需要哪些信息。
